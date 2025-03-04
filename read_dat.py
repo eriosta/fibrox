@@ -33,7 +33,7 @@ def get_column_specs(sas_url):
     
     return col_specs, col_names
 
-def read_to_dataframe(dat_url, sas_url):
+def read_to_dataframe(dat_url, sas_url, output_filename):
     # Download the DAT file content
     response = requests.get(dat_url)
     if response.status_code != 200:
@@ -46,6 +46,7 @@ def read_to_dataframe(dat_url, sas_url):
     if not col_specs:
         raise ValueError("No column specifications parsed from SAS file")
     
+    print(f"\nProcessing {output_filename}")
     print(f"Parsed {len(col_names)} columns from SAS file")
     print(f"First few columns: {col_names[:5]}")
     print(f"First few specs: {col_specs[:5]}")
@@ -67,23 +68,40 @@ def read_to_dataframe(dat_url, sas_url):
         print(f"Column specs: {col_specs[:5]}")  # Print first few specs for debugging
         raise
 
-# URLs
-sas_url = "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/adult.sas"
-dat_url = "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/adult.dat"
+# Dictionary of datasets with their URLs and output filenames
+datasets = {
+    'adult': {
+        'sas_url': "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/adult.sas",
+        'dat_url': "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/adult.dat",
+        'output': 'adult_data.csv'
+    },
+    'lab': {
+        'sas_url': "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/lab.sas",
+        'dat_url': "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/lab.dat",
+        'output': 'lab_data.csv'
+    },
+    'exam': {
+        'sas_url': "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/exam.sas",
+        'dat_url': "https://wwwn.cdc.gov/nchs/data/nhanes3/1a/exam.dat",
+        'output': 'exam_data.csv'
+    }
+}
 
-try:
-    # Read into DataFrame
-    df = read_to_dataframe(dat_url, sas_url)
-    
-    # Display results
-    print("\nDataFrame Info:")
-    print(df.info())
-    print("\nFirst 5 rows:")
-    print(df.head())
-    
-    # Save to CSV
-    df.to_csv('adult_data.csv', index=False)
-    print("\nSaved to adult_data.csv")
-    
-except Exception as e:
-    print(f"Error: {str(e)}")
+# Process all datasets
+for dataset_name, info in datasets.items():
+    try:
+        # Read into DataFrame
+        df = read_to_dataframe(info['dat_url'], info['sas_url'], dataset_name)
+        
+        # Display results
+        print(f"\n{dataset_name.capitalize()} DataFrame Info:")
+        print(df.info())
+        print(f"\nFirst 5 rows of {dataset_name}:")
+        print(df.head())
+        
+        # Save to CSV
+        df.to_csv(info['output'], index=False)
+        print(f"\nSaved to {info['output']}")
+        
+    except Exception as e:
+        print(f"Error processing {dataset_name}: {str(e)}")
