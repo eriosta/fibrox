@@ -2,71 +2,71 @@ import pandas as pd
 import numpy as np
 
 def is_masld(
-    Sex, 
-    'Body mass index', 
-    'Waist circumference (cm) (2+ years)', 
-    'Plasma glucose (mg/dL)', 
-    'Glycated hemoglobin: (%)', 
-    'Ever been told you have sugar/diabetes',
-    'Are you now taking insulin', 
-    'Are you now taking diabetes pills', 
-    'Overall average K1, systolic, BP(age 5+)', 
-    'Overall average K5, diastolic, BP(age5+)', 
-    'Now taking prescribed medicine for HBP', 
-    'Serum triglycerides (mg/dL)', 
-    'Take prescribed med to lower cholesterol', 
-    'Serum HDL cholesterol (mg/dL)'
+    sex,
+    bmi,
+    waist_cm,
+    glucose_mgdl,
+    hba1c_percent,
+    diabetes_history,
+    insulin_use,
+    diabetes_pills,
+    systolic_bp,
+    diastolic_bp,
+    hbp_med,
+    triglycerides_mgdl,
+    cholesterol_med,
+    hdl_mgdl
 ):
     """
     Determines if a patient meets MASLD criteria based on NHANES III variables.
 
     Parameters (NHANES III):
-        Sex: Sex (1 = Male, 2 = Female)
-        'Body mass index': Body-mass index
-        'Waist circumference (cm) (2+ years)': Waist circumference (cm)
-        'Plasma glucose (mg/dL)': Plasma glucose (mg/dL)
-        'Glycated hemoglobin: (%)': Glycated hemoglobin (HbA1c)
-        'Ever been told you have sugar/diabetes': History of diabetes (1 = Yes, 2 = No)
-        'Are you now taking insulin': Currently taking insulin (1 = Yes, 2 = No)
-        'Are you now taking diabetes pills': Currently taking diabetes pills (1 = Yes, 2 = No)
-        'Overall average K1, systolic, BP(age 5+)': Systolic blood pressure
-        'Overall average K5, diastolic, BP(age5+)': Diastolic blood pressure
-        'Now taking prescribed medicine for HBP': Taking medication for high blood pressure (1 = Yes, 2 = No)
-        'Serum triglycerides (mg/dL)': Serum triglycerides (mg/dL)
-        'Take prescribed med to lower cholesterol': Taking cholesterol-lowering medication (1 = Yes, 2 = No)
-        'Serum HDL cholesterol (mg/dL)': Serum HDL cholesterol (mg/dL)
+        sex: Sex (1 = Male, 2 = Female)
+        bmi: Body-mass index
+        waist_cm: Waist circumference (cm)
+        glucose_mgdl: Plasma glucose (mg/dL)
+        hba1c_percent: Glycated hemoglobin (HbA1c)
+        diabetes_history: History of diabetes (1 = Yes, 2 = No)
+        insulin_use: Currently taking insulin (1 = Yes, 2 = No)
+        diabetes_pills: Currently taking diabetes pills (1 = Yes, 2 = No)
+        systolic_bp: Systolic blood pressure
+        diastolic_bp: Diastolic blood pressure
+        hbp_med: Taking medication for high blood pressure (1 = Yes, 2 = No)
+        triglycerides_mgdl: Serum triglycerides (mg/dL)
+        cholesterol_med: Taking cholesterol-lowering medication (1 = Yes, 2 = No)
+        hdl_mgdl: Serum HDL cholesterol (mg/dL)
 
     Returns:
         dict: Dictionary with MASLD criteria results and individual criteria flags.
     """
 
     # Criterion 1, body: BMI or waist circumference
-    bmi_criteria = 'Body mass index' >= 25
-    wc_criteria = 'Waist circumference (cm) (2+ years)' > (94 if Sex == 1 else 80)
+    bmi_criteria = bmi >= 25
+    wc_criteria = waist_cm > (94 if sex == 1 else 80)
     is_body = int(bmi_criteria or wc_criteria)
 
     # Criterion 2, diabetes: Blood glucose or diabetes history/treatment
     is_diabetes = int(
-        'Plasma glucose (mg/dL)' >= 100 or
-        'Glycated hemoglobin: (%)' >= 5.7 or
-        'Ever been told you have sugar/diabetes' == 1 or
-        'Are you now taking insulin' == 1 or
-        'Are you now taking diabetes pills' == 1
+        glucose_mgdl >= 100 or
+        hba1c_percent >= 5.7 or
+        diabetes_history == 1 or
+        insulin_use == 1 or
+        diabetes_pills == 1
     )
 
     # Criterion 3, hypertension: Blood pressure or antihypertensive treatment
     is_hypertension = int(
-        'Overall average K1, systolic, BP(age 5+)' >= 130 or
-        'Overall average K5, diastolic, BP(age5+)' >= 85 or
-        'Now taking prescribed medicine for HBP' == 1
+        systolic_bp >= 130 or
+        diastolic_bp >= 85 or
+        hbp_med == 1
     )
 
     # Criterion 4 and 5, dyslipidemia: Triglycerides, HDL cholesterol, or lipid-lowering treatment
     is_dyslipidemia = int(
-        'Serum triglycerides (mg/dL)' >= 150 or
-        'Take prescribed med to lower cholesterol' == 1 or
-        ('Serum HDL cholesterol (mg/dL)' <= 40 if Sex == 1 else 'Serum HDL cholesterol (mg/dL)' <= 50) or
-        'Take prescribed med to lower cholesterol' == 1
+        triglycerides_mgdl >= 150 or
+        cholesterol_med == 1 or
+        (hdl_mgdl <= 40 if sex == 1 else hdl_mgdl <= 50) or
+        cholesterol_med == 1
     )
 
     # MASLD criteria met if at least one of the criteria is true
