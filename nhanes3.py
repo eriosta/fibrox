@@ -87,64 +87,75 @@
 
 # dat.to_csv('nhanes3.csv',index=False)
 
-
-import numpy as np
 import pandas as pd
+import numpy as np
 
 def is_masld(
-    HSSEX, BMPBMI, BMPWAIST, G1P, GHP, HAD1, HAD6, HAD10,
-    PEPMNK1R, PEPMNK5R, HAE5A, TGP, HAE9D, HDP
+    Sex, 
+    'Body mass index', 
+    'Waist circumference (cm) (2+ years)', 
+    'Plasma glucose (mg/dL)', 
+    'Glycated hemoglobin: (%)', 
+    'Ever been told you have sugar/diabetes',
+    'Are you now taking insulin', 
+    'Are you now taking diabetes pills', 
+    'Overall average K1, systolic, BP(age 5+)', 
+    'Overall average K5, diastolic, BP(age5+)', 
+    'Now taking prescribed medicine for HBP', 
+    'Serum triglycerides (mg/dL)', 
+    'Take prescribed med to lower cholesterol', 
+    'Serum HDL cholesterol (mg/dL)'
 ):
     """
     Determines if a patient meets MASLD criteria based on NHANES III variables.
 
     Parameters (NHANES III):
-        HSSEX: Sex (1 = Male, 2 = Female)
-        BMPBMI: Body-mass index
-        BMPWAIST: Waist circumference (cm)
-        G1P: Plasma glucose (mg/dL)
-        GHP: Glycated hemoglobin (HbA1c)
-        HAD1: History of diabetes (1 = Yes, 2 = No)
-        HAD6: Currently taking insulin (1 = Yes, 2 = No)
-        HAD10: Currently taking diabetes pills (1 = Yes, 2 = No)
-        PEPMNK1R: Systolic blood pressure
-        PEPMNK5R: Diastolic blood pressure
-        HAE5A: Taking medication for high blood pressure (1 = Yes, 2 = No)
-        TGP: Serum triglycerides (mg/dL)
-        HAE9D: Taking cholesterol-lowering medication (1 = Yes, 2 = No)
-        HDP: Serum HDL cholesterol (mg/dL)
+        Sex: Sex (1 = Male, 2 = Female)
+        'Body mass index': Body-mass index
+        'Waist circumference (cm) (2+ years)': Waist circumference (cm)
+        'Plasma glucose (mg/dL)': Plasma glucose (mg/dL)
+        'Glycated hemoglobin: (%)': Glycated hemoglobin (HbA1c)
+        'Ever been told you have sugar/diabetes': History of diabetes (1 = Yes, 2 = No)
+        'Are you now taking insulin': Currently taking insulin (1 = Yes, 2 = No)
+        'Are you now taking diabetes pills': Currently taking diabetes pills (1 = Yes, 2 = No)
+        'Overall average K1, systolic, BP(age 5+)': Systolic blood pressure
+        'Overall average K5, diastolic, BP(age5+)': Diastolic blood pressure
+        'Now taking prescribed medicine for HBP': Taking medication for high blood pressure (1 = Yes, 2 = No)
+        'Serum triglycerides (mg/dL)': Serum triglycerides (mg/dL)
+        'Take prescribed med to lower cholesterol': Taking cholesterol-lowering medication (1 = Yes, 2 = No)
+        'Serum HDL cholesterol (mg/dL)': Serum HDL cholesterol (mg/dL)
 
     Returns:
         dict: Dictionary with MASLD criteria results and individual criteria flags.
     """
 
     # Criterion 1, body: BMI or waist circumference
-    bmi_criteria = BMPBMI >= 25
-    wc_criteria = BMPWAIST > (94 if HSSEX == 1 else 80)
+    bmi_criteria = 'Body mass index' >= 25
+    wc_criteria = 'Waist circumference (cm) (2+ years)' > (94 if Sex == 1 else 80)
     is_body = int(bmi_criteria or wc_criteria)
 
     # Criterion 2, diabetes: Blood glucose or diabetes history/treatment
     is_diabetes = int(
-        G1P >= 100 or
-        GHP >= 5.7 or
-        HAD1 == 1 or
-        HAD6 == 1 or
-        HAD10 == 1
+        'Plasma glucose (mg/dL)' >= 100 or
+        'Glycated hemoglobin: (%)' >= 5.7 or
+        'Ever been told you have sugar/diabetes' == 1 or
+        'Are you now taking insulin' == 1 or
+        'Are you now taking diabetes pills' == 1
     )
 
     # Criterion 3, hypertension: Blood pressure or antihypertensive treatment
     is_hypertension = int(
-        PEPMNK1R >= 130 or
-        PEPMNK5R >= 85 or
-        HAE5A == 1
+        'Overall average K1, systolic, BP(age 5+)' >= 130 or
+        'Overall average K5, diastolic, BP(age5+)' >= 85 or
+        'Now taking prescribed medicine for HBP' == 1
     )
 
     # Criterion 4 and 5, dyslipidemia: Triglycerides, HDL cholesterol, or lipid-lowering treatment
     is_dyslipidemia = int(
-        TGP >= 150 or
-        HAE9D == 1 or
-        (HDP <= 40 if HSSEX == 1 else HDP <= 50) or
-        HAE9D == 1
+        'Serum triglycerides (mg/dL)' >= 150 or
+        'Take prescribed med to lower cholesterol' == 1 or
+        ('Serum HDL cholesterol (mg/dL)' <= 40 if Sex == 1 else 'Serum HDL cholesterol (mg/dL)' <= 50) or
+        'Take prescribed med to lower cholesterol' == 1
     )
 
     # MASLD criteria met if at least one of the criteria is true
@@ -171,32 +182,30 @@ def replace_blank_and_dont_know_with_na(data):
     """
     # Define the values for 'Blank but applicable' and 'Don't know' by variable
     blank_values = {
-        'BMPBMI': 8888,        # "Body mass index"
-        'BMPWAIST': 88888,     # "Waist circumference (cm) (2+ years)"
-        'G1P': 88888,          # "Plasma glucose (mg/dL)"
-        'GHP': 8888,           # "Glycated hemoglobin: (%)"
-        'HAD1': [8, 9],        # "Ever been told you have sugar/diabetes" (8 = Blank, 9 = Don't know)
-        'HAD6': 8,             # "Are you now taking insulin" (8 = Blank)
-        'HAD10': [8, 9],       # "Are you now taking diabetes pills"
-        'PEPMNK1R': 888,       # "Overall average K1, systolic, BP(age 5+)"
-        'PEPMNK5R': 888,       # "Overall average K5, diastolic, BP(age5+)"
-        'HAE5A': 8,            # "Now taking prescribed medicine for HBP" (8 = Blank)
-        'TGP': 8888,           # "Serum triglycerides (mg/dL)"
-        'HAE9D': [8, 9],       # "Take prescribed med to lower cholesterol" (8 = Blank, 9 = Don't know)
-        'HDP': 888,            # "Serum HDL cholesterol (mg/dL)"
-        'HAR3': 8,             # "Do you smoke cigarettes now" 
-        'HAR1': 8,             # "Have you smoked 100+ cigarettes in life"
-        'TCP': 888             # "Serum cholesterol (mg/dL)"
+        'Body mass index': 8888,
+        'Waist circumference (cm) (2+ years)': 88888,
+        'Plasma glucose (mg/dL)': 88888,
+        'Glycated hemoglobin: (%)': 8888,
+        'Ever been told you have sugar/diabetes': [8, 9],
+        'Are you now taking insulin': 8,
+        'Are you now taking diabetes pills': [8, 9],
+        'Overall average K1, systolic, BP(age 5+)': 888,
+        'Overall average K5, diastolic, BP(age5+)': 888,
+        'Now taking prescribed medicine for HBP': 8,
+        'Serum triglycerides (mg/dL)': 8888,
+        'Take prescribed med to lower cholesterol': [8, 9],
+        'Serum HDL cholesterol (mg/dL)': 888,
+        'Do you smoke cigarettes now': 8,
+        'Have you smoked 100+ cigarettes in life': 8,
+        'Serum cholesterol (mg/dL)': 888
     }
 
     # Replace each 'Blank but applicable' or 'Don't know' value with None (NA) if it matches the criteria
     for key, blank_value in blank_values.items():
         if isinstance(blank_value, list):
-            # If the blank value is a list (for both Blank and Don't know), check for any match
             if data.get(key) in blank_value:
                 data[key] = np.nan
         else:
-            # Otherwise, check if the value matches the single blank indicator
             if data.get(key) == blank_value:
                 data[key] = np.nan
 
@@ -241,16 +250,16 @@ df = df[df['is_masld'] == 1]
 
 # Define columns and their respective values to be replaced with NaN
 columns_to_replace = {
-    'ASPSI': 888,  # AST
-    'ATPSI': 888,  # ALT
-    'GGPSI': 8888,  # GGT
-    'PLP': 88888,  # platelets
-    'HSAGEIR': 888,  # Age
-    'BMPBMI': 8888,  # BMI
-    'AMP': 888,  # albumin
-    'GHP': 8888, # A1c
-    'CEP': 8888,
-    'BMPWAIST': 88888 
+    'Serum aspartate aminotransferase (AST) (U/L)': 888,
+    'Serum alanine aminotransferase (ALT) (U/L)': 888,
+    'Serum gamma glutamyl transferase (GGT) (U/L)': 8888,
+    'Platelet count (1000 cells/uL)': 88888, 
+    'Age at interview (screener)': 888, 
+    'Body mass index': 8888,
+    'Serum albumin (g/dL)': 888,
+    'Glycated hemoglobin: (%)': 8888,
+    'Serum creatinine (mg/dL)': 8888,
+    'Waist circumference (cm) (2+ years)': 88888 
 }
 
 for column, value in columns_to_replace.items():
@@ -258,15 +267,15 @@ for column, value in columns_to_replace.items():
 
 # Function to calculate FIB4
 def calculate_fib4(age, ast, alt, platelets):
-    if pd.isna(age) or pd.isna(ast) or pd.isna(alt) or pd.isna(platelets) or alt == 0 or platelets == 0:  # Check for NA values and avoid division by zero
+    if pd.isna(age) or pd.isna(ast) or pd.isna(alt) or pd.isna(platelets) or alt == 0 or platelets == 0:
         return np.nan
     return (age * ast) / (platelets * np.sqrt(alt))
 
 # Function to calculate NFS
 def calculate_nfs(age, bmi, diabetes, ast, alt, platelets, albumin):
-    if pd.isna(age) or pd.isna(bmi) or pd.isna(diabetes) or pd.isna(ast) or pd.isna(alt) or pd.isna(platelets) or pd.isna(albumin) or alt == 0:  # Check for NA values and avoid division by zero
+    if pd.isna(age) or pd.isna(bmi) or pd.isna(diabetes) or pd.isna(ast) or pd.isna(alt) or pd.isna(platelets) or pd.isna(albumin) or alt == 0:
         return np.nan
-    ast_alt_ratio = ast / alt  # No need to check for alt here since we already checked above
+    ast_alt_ratio = ast / alt
     return (-1.675 + 
             (0.037 * age) + 
             (0.094 * bmi) + 
@@ -274,14 +283,11 @@ def calculate_nfs(age, bmi, diabetes, ast, alt, platelets, albumin):
             (0.99 * ast_alt_ratio) - 
             (0.013 * platelets) - 
             (0.66 * albumin))
+
 # Apply the calculations to the DataFrame
-df['FIB4'] = df.apply(lambda row: calculate_fib4(row['HSAGEIR'], row['ASPSI'], row['ATPSI'], row['PLP']), axis=1)
-df['NFS'] = df.apply(lambda row: calculate_nfs(row['HSAGEIR'], row['BMPBMI'], row['is_diabetes'], row['ASPSI'], row['ATPSI'], row['PLP'], row['AMP']), axis=1)
+df['FIB4'] = df.apply(lambda row: calculate_fib4(row['Age at interview (screener)'], row['ASPSI'], row['ATPSI'], row['PLP']), axis=1)
+df['NFS'] = df.apply(lambda row: calculate_nfs(row['Age at interview (screener)'], row['Body mass index'], row['is_diabetes'], row['ASPSI'], row['ATPSI'], row['PLP'], row['AMP']), axis=1)
 
-# SUBSET BY COMPLETE FIB4 AND NFS SCORE TO COMPARE HEAD TO HEAD
-# df = df.dropna(subset=['FIB4', 'NFS'])
-
-# df['is_high_risk_f3_fib4'] = (df['FIB4'] > 2.67).astype(int)
 df['is_high_risk_f3_fib4'] = (df['FIB4'] > 1.30).astype(int)
 df['is_high_risk_f3_nfs'] = (df['NFS'] > 0.676).astype(int)
 
@@ -291,29 +297,24 @@ def calculate_gfr(serum_cr, age, is_female):
         gfr *= 0.742
     return gfr
 
-df['is_female'] = (df['HSSEX'] == 2).astype(int)
-df['GFR'] = df.apply(lambda row: calculate_gfr(row['CEP'], row['HSAGEIR'], row['is_female']), axis=1)
-
+df['is_female'] = (df['Sex'] == 2).astype(int)
+df['GFR'] = df.apply(lambda row: calculate_gfr(row['Serum creatinine (mg/dL)'], row['Age at interview (screener)'], row['is_female']), axis=1)
 
 df = df.apply(lambda row: replace_blank_and_dont_know_with_na(row.to_dict()), axis=1, result_type='expand')
 
-
 def calculate_framingham_risk_score(row):
     is_female = row['is_female']
-    age = row['HSAGEIR']
-    total_chol = row['TCP']
-    hdl_chol = row['HDP']
-    syst_bp = row['PEPMNK1R']
-    bp_treated = 0 if pd.isna(row['HAE5A']) else (0 if row['HAE5A'] == 2 else row['HAE5A'])
-    smoker = 0 if 'HAR3' in row and pd.isna(row['HAR3']) else (0 if row['HAR3'] == 2 else row['HAR3']) if 'HAR3' in row else (0 if pd.isna(row['HAR1']) else (0 if row['HAR1'] == 2 else row['HAR1']))
+    age = row['Age at interview (screener)']
+    total_chol = row['Serum cholesterol (mg/dL)']
+    hdl_chol = row['Serum HDL cholesterol (mg/dL)']
+    syst_bp = row['Overall average K1, systolic, BP(age 5+)']
+    bp_treated = 0 if pd.isna(row['Now taking prescribed medicine for HBP']) else (0 if row['Now taking prescribed medicine for HBP'] == 2 else row['Now taking prescribed medicine for HBP'])
+    smoker = 0 if 'Do you smoke cigarettes now' in row and pd.isna(row['Do you smoke cigarettes now']) else (0 if row['Do you smoke cigarettes now'] == 2 else row['Do you smoke cigarettes now']) if 'Do you smoke cigarettes now' in row else (0 if pd.isna(row['Have you smoked 100+ cigarettes in life']) else (0 if row['Have you smoked 100+ cigarettes in life'] == 2 else row['Have you smoked 100+ cigarettes in life']))
 
-    # Check for any NaN values
     if any(pd.isna([age, total_chol, hdl_chol, syst_bp, bp_treated, smoker])):
         return np.nan
 
     if is_female == 1:
-        # Calculate for Women
-
         if age <= 0 or total_chol <= 0 or hdl_chol <= 0 or syst_bp <= 0:
             return np.nan
 
@@ -322,7 +323,6 @@ def calculate_framingham_risk_score(row):
         ln_hdl_chol = np.log(hdl_chol)
         ln_syst_bp = np.log(syst_bp)
 
-        # Adjust ln_age for smoker interaction
         if age > 78:
             ln_age_smoker = np.log(78) * smoker
         else:
@@ -344,8 +344,6 @@ def calculate_framingham_risk_score(row):
         return PWomen
 
     else:
-        # Calculate for Men
-
         if age <= 0 or total_chol <= 0 or hdl_chol <= 0 or syst_bp <= 0:
             return np.nan
 
@@ -354,13 +352,11 @@ def calculate_framingham_risk_score(row):
         ln_hdl_chol = np.log(hdl_chol)
         ln_syst_bp = np.log(syst_bp)
 
-        # Adjust ln_age for smoker interaction
         if age > 70:
             ln_age_smoker = np.log(70) * smoker
         else:
             ln_age_smoker = ln_age * smoker
 
-        # Calculate ln_age squared
         ln_age_sq = ln_age ** 2
 
         LMen = (
@@ -383,15 +379,16 @@ def calculate_framingham_risk_score(row):
 df['Framingham_Risk_Score'] = df.apply(calculate_framingham_risk_score, axis=1)
 
 df[[
-    'TCP','HDP','PEPMNK1R','HAR1'
+    'Serum cholesterol (mg/dL)',
+    'Serum HDL cholesterol (mg/dL)',
+    'Overall average K1, systolic, BP(age 5+)',
+    'Have you smoked 100+ cigarettes in life'
 ]].info()
 
+df.to_csv('nhanes3_masld.csv', index=False)
 
-
-df.to_csv('nhanes3/nhanes3_masld.csv', index=False)
-
-mortality_df = pd.read_csv('nhanes3/NHANES_III_2019.csv')
+mortality_df = pd.read_csv('NHANES_III_2019.csv')
 df['seqn'] = df['SEQN'].astype(int)
 merge_df = pd.merge(mortality_df, df, on='seqn', how='inner')
 merge_df = merge_df[merge_df['eligstat'] != 2]
-merge_df.to_csv('nhanes3/nhanes3_masld_mortality.csv')
+merge_df.to_csv('nhanes3_masld_mortality.csv')
