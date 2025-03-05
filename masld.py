@@ -165,7 +165,7 @@ columns_to_replace = {
     'Alanine aminotransferase:  SI (U/L)': 888,
     'Gamma glutamyl transferase: SI(U/L)': 8888,
     'Platelet count': 88888, 
-    'Age at interview (screener)': 888, 
+    'Age at interview (screener) - qty': 888, 
     'Body mass index': 8888,
     'Serum albumin (g/dL)': 888,
     'Glycated hemoglobin: (%)': 8888,
@@ -196,8 +196,8 @@ def calculate_nfs(age, bmi, diabetes, ast, alt, platelets, albumin):
             (0.66 * albumin))
 
 # Apply the calculations to the DataFrame
-df['FIB4'] = df.apply(lambda row: calculate_fib4(row['Age at interview (screener)'], row['Aspartate aminotransferase: SI(U/L)'], row['Alanine aminotransferase:  SI (U/L)'], row['Platelet count']), axis=1)
-df['NFS'] = df.apply(lambda row: calculate_nfs(row['Age at interview (screener)'], row['Body mass index'], row['is_diabetes'], row['Aspartate aminotransferase: SI(U/L)'], row['Alanine aminotransferase:  SI (U/L)'], row['Platelet count'], row['Serum albumin (g/dL)']), axis=1)
+df['FIB4'] = df.apply(lambda row: calculate_fib4(row['Age at interview (screener) - qty'], row['Aspartate aminotransferase: SI(U/L)'], row['Alanine aminotransferase:  SI (U/L)'], row['Platelet count']), axis=1)
+df['NFS'] = df.apply(lambda row: calculate_nfs(row['Age at interview (screener) - qty'], row['Body mass index'], row['is_diabetes'], row['Aspartate aminotransferase: SI(U/L)'], row['Alanine aminotransferase:  SI (U/L)'], row['Platelet count'], row['Serum albumin (g/dL)']), axis=1)
 
 df['is_high_risk_f3_fib4'] = (df['FIB4'] > 1.30).astype(int)
 df['is_high_risk_f3_nfs'] = (df['NFS'] > 0.676).astype(int)
@@ -209,13 +209,13 @@ def calculate_gfr(serum_cr, age, is_female):
     return gfr
 
 df['is_female'] = (df['Sex'] == 2).astype(int)
-df['GFR'] = df.apply(lambda row: calculate_gfr(row['Serum creatinine (mg/dL)'], row['Age at interview (screener)'], row['is_female']), axis=1)
+df['GFR'] = df.apply(lambda row: calculate_gfr(row['Serum creatinine (mg/dL)'], row['Age at interview (screener) - qty'], row['is_female']), axis=1)
 
 df = df.apply(lambda row: replace_blank_and_dont_know_with_na(row.to_dict()), axis=1, result_type='expand')
 
 def calculate_framingham_risk_score(row):
     is_female = row['is_female']
-    age = row['Age at interview (screener)']
+    age = row['Age at interview (screener) - qty']
     total_chol = row['Serum cholesterol (mg/dL)']
     hdl_chol = row['Serum HDL cholesterol (mg/dL)']
     syst_bp = row['Overall average K1, systolic, BP(age 5+)']
