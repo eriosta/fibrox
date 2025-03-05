@@ -161,10 +161,10 @@ df = df[df['is_masld'] == 1]
 
 # Define columns and their respective values to be replaced with NaN
 columns_to_replace = {
-    'Serum aspartate aminotransferase (AST) (U/L)': 888,
-    'Serum alanine aminotransferase (ALT) (U/L)': 888,
-    'Serum gamma glutamyl transferase (GGT) (U/L)': 8888,
-    'Platelet count (1000 cells/uL)': 88888, 
+    'Aspartate aminotransferase: SI(U/L)': 888,
+    'Alanine aminotransferase:  SI (U/L)': 888,
+    'Gamma glutamyl transferase: SI(U/L)': 8888,
+    'Platelet count': 88888, 
     'Age at interview (screener)': 888, 
     'Body mass index': 8888,
     'Serum albumin (g/dL)': 888,
@@ -196,8 +196,8 @@ def calculate_nfs(age, bmi, diabetes, ast, alt, platelets, albumin):
             (0.66 * albumin))
 
 # Apply the calculations to the DataFrame
-df['FIB4'] = df.apply(lambda row: calculate_fib4(row['Age at interview (screener)'], row['ASPSI'], row['ATPSI'], row['PLP']), axis=1)
-df['NFS'] = df.apply(lambda row: calculate_nfs(row['Age at interview (screener)'], row['Body mass index'], row['is_diabetes'], row['ASPSI'], row['ATPSI'], row['PLP'], row['AMP']), axis=1)
+df['FIB4'] = df.apply(lambda row: calculate_fib4(row['Age at interview (screener)'], row['Aspartate aminotransferase: SI(U/L)'], row['Alanine aminotransferase:  SI (U/L)'], row['Platelet count']), axis=1)
+df['NFS'] = df.apply(lambda row: calculate_nfs(row['Age at interview (screener)'], row['Body mass index'], row['is_diabetes'], row['Aspartate aminotransferase: SI(U/L)'], row['Alanine aminotransferase:  SI (U/L)'], row['Platelet count'], row['Serum albumin (g/dL)']), axis=1)
 
 df['is_high_risk_f3_fib4'] = (df['FIB4'] > 1.30).astype(int)
 df['is_high_risk_f3_nfs'] = (df['NFS'] > 0.676).astype(int)
