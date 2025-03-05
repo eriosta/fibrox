@@ -202,14 +202,44 @@ df['NFS'] = df.apply(lambda row: calculate_nfs(row['Age at interview (screener) 
 df['is_high_risk_f3_fib4'] = (df['FIB4'] > 1.30).astype(int)
 df['is_high_risk_f3_nfs'] = (df['NFS'] > 0.676).astype(int)
 
-def calculate_gfr(serum_cr, age, is_female):
-    gfr = 175 * (serum_cr ** -1.154) * (age ** -0.203)
+def calculate_gfr_ckdepi(serum_cr, age, is_female):
+    """
+    Calculate GFR using the CKD-EPI equation.
+    
+    Args:
+        serum_cr: Serum creatinine in mg/dL
+        age: Age in years  
+        is_female: Boolean indicating if patient is female
+    
+    Returns:
+        Calculated GFR value
+    """
     if is_female:
-        gfr *= 0.742
+        if serum_cr <= 0.7:
+            A = 0.7
+            B = -0.241
+        else:
+            A = 0.7 
+            B = -1.2
+    else:
+        if serum_cr <= 0.9:
+            A = 0.9
+            B = -0.302
+        else:
+            A = 0.9
+            B = -1.2
+            
+    gfr = 142 * ((serum_cr/A)**B) * (0.9938**age)
+    
+    if is_female:
+        gfr *= 1.012
+        
     return gfr
 
+
 df['is_female'] = (df['Sex'] == 2).astype(int)
-df['GFR'] = df.apply(lambda row: calculate_gfr(row['Serum creatinine (mg/dL)'], row['Age at interview (screener) - qty'], row['is_female']), axis=1)
+
+df['GFR_EPI'] = df.apply(lambda row: calculate_gfr_ckdepi(row['Serum creatinine (mg/dL)'], row['Age at interview (screener) - qty'], row['is_female']), axis=1)
 
 df = df.apply(lambda row: replace_blank_and_dont_know_with_na(row.to_dict()), axis=1, result_type='expand')
 
@@ -303,3 +333,65 @@ df['seqn'] = df['SEQN'].astype(int)
 merge_df = pd.merge(mortality_df, df, on='seqn', how='inner')
 merge_df = merge_df[merge_df['eligstat'] != 2]
 merge_df.to_csv('nhanes3_masld_mortality.csv')
+
+import tableone
+
+tmp = merge_df.dropna(subset=['FIB4','NFS','mortstat'])
+
+tmp['is_cardiac_mortality'] = ((tmp['ucod_leading'] == 1) | 
+                              (tmp['ucod_leading'] == 5)).astype(int)
+
+tmp['Race-ethnicity'] = tmp['Race-ethnicity'].map({
+    1: 'Non-Hispanic White',
+    2: 'Non-Hispanic Black', 
+    3: 'Mexican-American',
+    4: 'Other'
+})
+
+tmp['Sex'] = tmp['Sex'].map({
+    1: 'Male',
+    2: 'Female'
+})
+
+columns = [
+    'Age at interview (screener) - qty',
+    'Sex',
+    'Race-ethnicity',
+    'Body mass index',
+    'Alanine aminotransferase:  SI (U/L)',
+    'Aspartate aminotransferase: SI(U/L)',
+    'Gamma glutamyl transferase: SI(U/L)',
+    'Platelet count',
+    'Glycated hemoglobin: (%)',
+    'Serum HDL cholesterol (mg/dL)',
+    'Serum triglycerides (mg/dL)',
+    'GFR_EPI',
+    'Serum creatinine (mg/dL)',
+    'Serum albumin (g/dL)',
+    'is_body',
+    'is_diabetes',
+    'is_hypertension',
+    'is_dyslipidemia',
+    'FIB4',
+    'NFS',
+    'mortstat',
+    'is_cardiac_mortality'
+]
+
+categorical = [
+    'Sex',
+    'Race-ethnicity',
+    'is_body',
+    'is_diabetes',
+    'is_hypertension',
+    'is_dyslipidemia',
+    'mortstat',
+    'is_cardiac_mortality'
+]
+
+# Create the TableOne object
+table1 = tableone.TableOne(tmp, columns=columns, categorical=categorical)
+
+# Print the table
+print(table1.tabulate(tablefmt="github"))
+
