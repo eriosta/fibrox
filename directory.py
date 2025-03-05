@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # Define the root directory as the current directory
-root_dir = "."  # Use current directory (fibrox/) instead of creating a new fibrox/
+root_dir = "."  # Use current directory (fibrox/)
 
 # Define the directory structure as a dictionary
 structure = {
@@ -61,6 +61,7 @@ structure = {
 def create_structure(base_path, structure):
     """
     Recursively create directories and files based on the structure dictionary.
+    Only creates files if they don't already exist.
     """
     for key, value in structure.items():
         # If key is empty, we're at the root level (current directory)
@@ -70,20 +71,20 @@ def create_structure(base_path, structure):
         if key:
             Path(current_path).mkdir(parents=True, exist_ok=True)
         
-        # If value is a list, create files
+        # If value is a list, create files only if they don't exist
         if isinstance(value, list):
             for item in value:
                 file_path = os.path.join(current_path, item)
-                # Create an empty file (touch equivalent)
-                Path(file_path).touch()
+                # Create an empty file only if it doesn't already exist
+                if not Path(file_path).exists():
+                    Path(file_path).touch()
         # If value is a dict, recurse deeper
         elif isinstance(value, dict):
             create_structure(current_path, value)
 
 # Create the structure in the current directory
 if __name__ == "__main__":
-    # No need to create root_dir since we're already in fibrox/
-    # Just create the structure directly
+    # Create the structure directly in the current directory
     create_structure(root_dir, structure)
     
-    print(f"Directory structure created successfully in the current directory (fibrox/)")
+    print(f"Directory structure created successfully in the current directory (fibrox/), skipping existing files")
