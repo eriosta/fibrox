@@ -208,11 +208,20 @@ def apply_is_masld(row):
     
     # Then apply the is_masld function
     result = is_masld(
-        row_dict['HSSEX'], row_dict['BMPBMI'], row_dict['BMPWAIST'],
-        row_dict['G1P'], row_dict['GHP'], row_dict['HAD1'],
-        row_dict['HAD6'], row_dict['HAD10'], row_dict['PEPMNK1R'],
-        row_dict['PEPMNK5R'], row_dict['HAE5A'], row_dict['TGP'],
-        row_dict['HAE9D'], row_dict['HDP']
+        row_dict['Sex'], 
+        row_dict['Body mass index'], 
+        row_dict['Waist circumference (cm) (2+ years)'],
+        row_dict['Plasma glucose (mg/dL)'], 
+        row_dict['Glycated hemoglobin: (%)'], 
+        row_dict['Ever been told you have sugar/diabetes'],
+        row_dict['Are you now taking insulin'], 
+        row_dict['Are you now taking diabetes pills'], 
+        row_dict['Overall average K1, systolic, BP(age 5+)'],
+        row_dict['Overall average K5, diastolic, BP(age5+)'], 
+        row_dict['Now taking prescribed medicine for HBP'], 
+        row_dict['Serum triglycerides (mg/dL)'],
+        row_dict['Take prescribed med to lower cholesterol'], 
+        row_dict['Serum HDL cholesterol (mg/dL)']
     )
     return pd.Series(result)
 
