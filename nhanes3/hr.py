@@ -60,7 +60,8 @@ index_cols = ['SEQN', 'mortstat', 'ucod_leading', 'permth_exm', 'NFS', 'FIB4']
 df_subset = df_subset.set_index(index_cols).dropna()
 
 # Load XGBoost model and make predictions
-with open(r"C:\Users\erios\masldai_mortality\xgboost_model_isF3_12_21_2024.pkl", 'rb') as file:
+# with open(r"C:\Users\erios\masldai_mortality\xgboost_model_isF3_12_21_2024.pkl", 'rb') as file:
+with open("fibrox.pkl", 'rb') as file:
     model = pickle.load(file)
 
 features = [
