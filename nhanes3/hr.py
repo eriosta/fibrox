@@ -6,7 +6,7 @@ import pickle
 import xgboost as xgb
 
 # Load and preprocess the data
-df = pd.read_csv("nhanes3/nhanes3_masld_mortality.csv").dropna(subset=['mortstat', 'NFS', 'FIB4'])
+df = pd.read_csv("nhanes3_masld_mortality.csv").dropna(subset=['mortstat', 'NFS', 'FIB4'])
 
 df_subset = df[[
     'SEQN', 'Alanine aminotransferase:  SI (U/L)', 'Platelet count', 
