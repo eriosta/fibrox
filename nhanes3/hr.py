@@ -6,25 +6,24 @@ import pickle
 import xgboost as xgb
 
 # Load and preprocess the data
-df = pd.read_csv("nhanes3_masld_mortality.csv").dropna(subset=['mortstat', 'NFS', 'FIB4'])
+df = pd.read_csv("nhanes3_masld_mortality.csv")
 
 df_subset = df[[
     'SEQN', 'Alanine aminotransferase:  SI (U/L)', 'Platelet count', 
     'Aspartate aminotransferase: SI(U/L)', 'Glycated hemoglobin: (%)', 'Body mass index', 'mortstat', 
     'ucod_leading', 'permth_exm', 'NFS', 'FIB4', 'GFR_EPI', 
 
-    # Predictors of all-cause mortality in MASLD
+    # Predictors of mortality in MASLD based on univariate analysis: 'age', 'gender', 'race', 'smoked_100_cigarettes', 'education_level', 'is_hypertension', 'is_diabetes', 'crp'
     'Age at interview (screener) - qty', 'Sex', 
     'Race-ethnicity', 'Have you smoked 100+ cigarettes in life',
-    'Poverty Income Ratio (unimputed income)', 'Highest grade or yr of school completed', 'is_hypertension', 'is_diabetes', 
-    'Serum C-reactive protein (mg/dL)'
+     'Highest grade or yr of school completed', 'is_hypertension', 'is_diabetes'
 ]]
 
 # Drop rows where NaN values are present in the specified columns
 df_subset = df_subset.dropna(subset=[
     'Age at interview (screener) - qty', 'Sex', 
     'Race-ethnicity', 'Have you smoked 100+ cigarettes in life',
-    'Poverty Income Ratio (unimputed income)', 'Highest grade or yr of school completed', 'is_hypertension', 'is_diabetes'
+    'Highest grade or yr of school completed', 'is_hypertension', 'is_diabetes'
 ])
 
 
@@ -43,7 +42,7 @@ df_subset = df_subset.rename(columns={
 
 # Set index and drop missing values
 index_cols = ['SEQN', 'mortstat', 'ucod_leading', 'permth_exm', 'NFS', 'FIB4']
-df_subset = df_subset.set_index(index_cols).dropna()
+df_subset = df_subset.set_index(index_cols)
 
 # Load XGBoost model and make predictions
 with open("xgboost_model_isF3_Youden_Index.pkl", 'rb') as file:
@@ -93,24 +92,49 @@ for spec, threshold in thresholds.items():
 # Create final mortality analysis dataset
 df_mort = df_subset_reset[[
     'mortstat', 'is_cardiac_mortality', 'is_malignancy_mortality', 'is_renal_mortality', 'is_diabetes_mortality', 'is_pneumonia_mortality',
-    'Prediction_Youden',
+    'FibroX_max_youden',
     'isnfsmod', 'isnfshigh',
     'isfib4mod', 'isfib4high',
+    'NFS', 'FIB4',
     'Age (years)', 'Sex', 'permth_exm',
     'Race-ethnicity', 'Have you smoked 100+ cigarettes in life',
-    'Poverty Income Ratio (unimputed income)', 'Highest grade or yr of school completed', 'is_hypertension', 'is_diabetes', 
-    'Serum C-reactive protein (mg/dL)'
+    'Highest grade or yr of school completed', 'is_hypertension', 'is_diabetes', 
 ]].rename(columns={
     'Age (years)': 'age',
     'Sex': 'gender',
     'Race-ethnicity': 'race',
     'Have you smoked 100+ cigarettes in life': 'smoked_100_cigarettes',
-    'Poverty Income Ratio (unimputed income)': 'poverty_income_ratio',
     'Highest grade or yr of school completed': 'education_level',
-    'Serum C-reactive protein (mg/dL)': 'crp'
 })
 
-df_mort['permth_exm'].describe()/12
+df_mort[['FIB4', 'NFS']]
+
+def run_univariate_analysis(df_mort, event_col, covariates):
+    """
+    Run univariate Cox proportional hazards analysis for each covariate
+    
+    Args:
+        df_mort: DataFrame with mortality data
+        event_col: Column name for mortality event
+        covariates: List of covariate column names to include in the model
+    
+    Returns:
+        Tuple containing:
+        - List of covariates significantly associated with the outcome
+        - Dictionary of model results for each covariate
+    """
+    significant_covariates = []
+    model_results = {}
+    for covariate in covariates:
+        df = df_mort[['permth_exm', event_col, covariate]].dropna()
+        df['time'] = df['permth_exm'] / 12
+        cph = CoxPHFitter()
+        cph.fit(df, duration_col='time', event_col=event_col, formula=covariate)
+        model_results[covariate] = cph.summary
+        # print(cph.summary)
+        if cph.summary.loc[covariate, 'p'] < 0.05:
+            significant_covariates.append(covariate)
+    return significant_covariates
 
 def run_survival_analysis(df_mort, follow_up_years, model_type, event_col, 
                           covariates=None, threshold_value=None):
@@ -134,7 +158,14 @@ def run_survival_analysis(df_mort, follow_up_years, model_type, event_col,
     df['time'] = df['permth_exm'] / 12
 
     # Select relevant columns
-    df = df[['time', event_col, model_type] + covariates].dropna()
+    if model_type.startswith('isfib4'):
+        df = df.dropna(subset=['FIB4'])
+        df = df[['time', event_col, model_type] + covariates].dropna()
+    elif model_type.startswith('isnfs'):
+        df = df.dropna(subset=['NFS'])
+        df = df[['time', event_col, model_type] + covariates].dropna()
+    else:
+        df = df[['time', event_col, model_type] + covariates].dropna()
     
     # Fit Cox model
     cph = CoxPHFitter()
@@ -160,14 +191,19 @@ def run_survival_analysis(df_mort, follow_up_years, model_type, event_col,
     else:
         event_type = f"{follow_up_years}-Year Mortality"
     
-    with open('assumption_checks.txt', 'a') as f:
-        f.write(f"\n\nResults for {model_type} - {follow_up_years} year follow-up - {event_type}:\n")
-        f.write("="*80 + "\n")
-        f.write("\nModel Summary:\n")
-        f.write(str(cph.summary))
-        f.write("\n\nProportional Hazards Test Results:\n")
-        f.write(str(cph.check_assumptions(df, show_plots=False)))
-        f.write("\n" + "="*80 + "\n")
+    with open('assumption_checks.html', 'a') as f:
+        f.write(f"<h2>Results for {model_type} - {follow_up_years} year follow-up - {event_type}</h2>\n")
+        f.write("<hr>\n")
+        f.write("<h3>Model Summary:</h3>\n")
+        f.write(cph.summary.to_html() + "\n")
+        f.write("<h3>Proportional Hazards Test Results:</h3>\n")
+        try:
+            assumption_results = cph.check_assumptions(df, show_plots=False)
+            assumption_results_html = assumption_results.to_html().replace('\n', '<br>').replace(' ', '&nbsp;')
+            f.write(assumption_results_html + "\n")
+        except AttributeError:
+            f.write("Proportional hazard assumption looks okay.<br>\n")
+        f.write("<hr>\n")
     
     # Plot survival curves
     plt.figure()
@@ -183,7 +219,7 @@ def run_survival_analysis(df_mort, follow_up_years, model_type, event_col,
         plt.gca().xaxis.set_major_locator(plt.MultipleLocator(3))
     
     # Set legend based on model type
-    if model_type.startswith('Prediction_Youden'):
+    if model_type.startswith('FibroX'):
         plt.legend(["FibroX Score <0.507", 
                    "FibroX Score ≥0.507"])
     elif model_type.startswith('isfib4'):
@@ -203,7 +239,11 @@ def run_survival_analysis(df_mort, follow_up_years, model_type, event_col,
     plt.close()
     
     # Return summary statistics
-    summary = cph.summary.loc[model_type] if model_type.startswith('FibroX') else cph.summary.iloc[0]
+    if model_type in cph.summary.index:
+        summary = cph.summary.loc[model_type]
+    else:
+        raise ValueError(f"Model type {model_type} not found in the summary index.")
+    
     return {
         'Model': model_type,
         'Mortality Type': event_type,
@@ -216,19 +256,31 @@ def run_survival_analysis(df_mort, follow_up_years, model_type, event_col,
         'p<0.05': summary['p'] < 0.05
     }
 
-# Clear the assumption_checks.txt file before starting new analyses
-open('assumption_checks.txt', 'w').close()
+# Run univariate analysis
+covariates = ['age', 'gender', 'race', 
+                'smoked_100_cigarettes', 'education_level', 
+                'is_hypertension', 'is_diabetes', 
+                'isnfsmod', 'isnfshigh',
+                'isfib4mod', 'isfib4high',
+                'FibroX_max_youden']
+
+univariate_results = run_univariate_analysis(df_mort, 'mortstat', covariates)
+
+# covariates = [result for result in univariate_results if result not in ['isnfsmod', 'isnfshigh', 'isfib4mod', 'isfib4high', 'FibroX_max_youden']]
+
+# covariates are the same for all-cause AND cardiovascular per univariate analysis
+covariates = ['age', 'gender', 'race', 'smoked_100_cigarettes', 'education_level', 'is_hypertension', 'is_diabetes']
+
+# Clear
+open('assumption_checks.html', 'w').close()
 
 # Run analyses for different follow-up periods and models
 follow_up_periods = [20,30]
-fibrox_models = ['Prediction_Youden']
+fibrox_models = ['FibroX_max_youden']
 nfs_models = [('isnfsmod', -1.455), ('isnfshigh', 0.676)]
 fib4_models = [('isfib4mod', 1.3), ('isfib4high', 2.67)]
 event_cols = ['mortstat', 'is_cardiac_mortality']
 
-covariates = ['age', 'gender', 'race', 
-                'smoked_100_cigarettes', 'poverty_income_ratio', 'education_level', 
-                'is_hypertension', 'is_diabetes', 'crp']
 # Store results
 results = []
 
@@ -259,10 +311,23 @@ print(summary_df)
 
 # Rename models for output
 summary_df['Model'] = summary_df['Model'].replace({
-    'Prediction_Youden': 'FibroX',
+    'FibroX_max_youden': 'FibroX',
     'isnfsmod': 'NFS >-1.455',
     'isnfshigh': 'NFS >=0.676',
     'isfib4mod': 'FIB-4 >1.3',
     'isfib4high': 'FIB-4 >=2.67'
 })
 summary_df.to_csv('adjusted_mortality.csv', index=False)
+
+# Release memory
+del df
+del df_subset
+del df_subset_reset
+del df_mort
+del data_dmatrix
+del y_pred_proba
+del model
+del summary_df
+import gc
+gc.collect()
+plt.close('all')
