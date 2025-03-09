@@ -22,7 +22,7 @@ df_subset = df_subset[df_subset['ucod_leading'] != 4].rename(columns={
     
 }).set_index(['SEQN', 'mortstat', 'ucod_leading', 'permth_exm', 'NFS', 'FIB4']).dropna()
 
-with open(r"C:\Users\erios\masldai_mortality\xgboost_model_isF3_12_21_2024.pkl", 'rb') as file:
+with open("xgboost_model_isF3_Youden_Index.pkl", 'rb') as file:
     model = pickle.load(file)
 
 features = ['Age (years)',
@@ -86,7 +86,7 @@ def plot_auroc(df, model_predictions, comparison_scores_fib4, comparison_scores_
 plot_auroc(df_subset_reset, y_pred_proba, df_subset_reset['FIB4'], df_subset_reset['NFS'], save_path='auroc_probabilities_12_21_2024.png')
 
 thresholds = {
-    '50_50': 0.5
+    'max_youden': 0.54
 }
 
 def analyze_thresholds(df_subset, y_pred_proba, thresholds, comparison_type='FIB4', comparison_thresholds=[1.3, 2.67]):
@@ -121,6 +121,8 @@ def analyze_thresholds(df_subset, y_pred_proba, thresholds, comparison_type='FIB
                 specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
                 ppv = tp / (tp + fp) if (tp + fp) > 0 else 0
                 npv = tn / (tn + fn) if (tn + fn) > 0 else 0
+                dor = (sensitivity / (1 - sensitivity)) / (1 - specificity) if (1 - specificity) > 0 else 0
+                total_n = len(true_labels)
                 
                 return {
                     'Label': label_name,
@@ -129,7 +131,9 @@ def analyze_thresholds(df_subset, y_pred_proba, thresholds, comparison_type='FIB
                     'Sensitivity': sensitivity,
                     'Specificity': specificity,
                     'PPV': ppv,
-                    'NPV': npv
+                    'NPV': npv,
+                    'DOR': dor,
+                    'Total_N': total_n
                 }
 
             results = []
@@ -181,12 +185,18 @@ def analyze_thresholds(df_subset, y_pred_proba, thresholds, comparison_type='FIB
 
             true_labels = df_subset_reset[['mortstat', 'is_cardiac_mortality']].values
             probabilities = {
-                comparison_type: df_subset_reset[comparison_type].values,
                 'XGB': df_subset_reset['Probability'].values
             }
 
+            # Add each comparison threshold to probabilities for DeLong test
+            for comp_threshold in comparison_thresholds:
+                col_name = f'{comparison_type}_{str(comp_threshold).replace(".", "_")}'
+                probabilities[col_name] = df_subset_reset[comparison_type].values
+
             all_results = []
             for i, true_label in enumerate(true_labels.T):
+                # Create comparisons for each threshold
+                comparisons = [(col_name, 'XGB') for col_name in probabilities if col_name != 'XGB']
                 results = perform_delong_test(true_label, probabilities, comparisons)
                 all_results.append(results)
 
@@ -200,11 +210,7 @@ def analyze_thresholds(df_subset, y_pred_proba, thresholds, comparison_type='FIB
             
             return metrics_df, delong_df
 
-        comparisons = [
-            (comparison_type, 'XGB')
-        ]
-
-        calculate_and_export_metrics(df_subset_reset, comparisons)
+        calculate_and_export_metrics(df_subset_reset, [])
 
 analyze_thresholds(df_subset, y_pred_proba, thresholds, comparison_type='NFS', comparison_thresholds=[-1.455, 0.676])
 

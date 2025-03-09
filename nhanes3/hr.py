@@ -66,7 +66,7 @@ y_pred_proba = model.predict(data_dmatrix)
 
 # Define cutoffs and create predictions
 thresholds = {
-    'Youden': 0.507
+    'max_youden': 0.54
 }
 
 # Add predictions to dataframe
