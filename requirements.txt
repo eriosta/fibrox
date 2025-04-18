@@ -2,10 +2,8 @@ xgboost
 scikit-learn
 numpy
 pandas
-
+streamlit
 matplotlib
 seaborn
-
 scipy
-
 shap
