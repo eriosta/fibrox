@@ -40,12 +40,13 @@ st.expander("**How do I use this tool?**", expanded=False).markdown("""
 
 selected_model = st.sidebar.radio(
     "Choose the model:",
-    ["At-Risk AI", "FibroX AI"],
+    ["FibroX AI", "At-Risk AI"],
+    index=0,  # Set FibroX AI as default
     help="""
+    **FibroX AI**: Identifies adults with MASLD who may develop advanced fibrosis (≥F3) and are at risk of 30-year cause-specific mortality. Uses Age, Hemoglobin A1c, ALT, AST, Platelets, BMI and GFR.
+    
     **At-Risk AI**: Identifies adults with MASLD who may develop at-risk MASH. 
     Uses ALT, GGT, Platelets, Age and BMI.
-    
-    **FibroX AI**: Identifies adults with MASLD who may develop advanced fibrosis (≥F3) and are at risk of 30-year cause-specific mortality. Uses Age, Hemoglobin A1c, ALT, AST, Platelets, BMI and GFR.
     """
 )
 
