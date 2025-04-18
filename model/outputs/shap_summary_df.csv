@@ -1,0 +1,8 @@
+Feature,Average_SHAP_Value,Standard_Deviation_SHAP_Value
+Alanine aminotransferase (U/L),0.022639394,0.012115899
+Body-mass index (kg/m**2),0.032852665,0.023568694
+GFR_EPI,0.074170515,0.068092205
+Aspartate aminotransferase (U/L),0.2044085,0.044096794
+Glycohemoglobin (%),0.2739453,0.036926355
+Age (years),0.39011174,0.17489567
+Platelet count (1000 cells/µL),0.43646282,0.11671458
