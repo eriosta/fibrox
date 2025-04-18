@@ -18,17 +18,9 @@ st.sidebar.title("FibroX AI")
 import subprocess
 
 def get_last_commit_date():
-    try:
-        # Get the date of the last commit
-        last_commit_date = subprocess.check_output(
-            ["git", "log", "-1", "--format=%cd"],
-            universal_newlines=True
-        ).strip()
-        return last_commit_date
-    except Exception as e:
-        return "Unavailable"
-
-last_commit_date = pd.to_datetime(get_last_commit_date()).strftime('%B %d, %Y')
+    return pd.Timestamp.now().strftime('%B %d, %Y')
+    
+last_commit_date = get_last_commit_date()
 st.sidebar.markdown(f"**Last update:** {last_commit_date}")
 
 st.sidebar.markdown(
